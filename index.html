@@ -1,0 +1,2983 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no">
+  <title>LightField AI Chat</title>
+  
+  <!-- 引入依赖 -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="hljs-theme">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+  
+  <style>
+    :root {
+      --bg-primary: #f5f5f7;
+      --bg-secondary: #ffffff;
+      --bg-chat: #ffffff;
+      --text-primary: #1d1d1f;
+      --text-secondary: #6e6e73;
+      --border-color: rgba(0,0,0,0.1);
+      --user-msg-bg: #eef2ff;
+      --user-msg-border: #c7d2fe;
+      --ai-msg-bg: #ffffff;
+      --accent-color: #007aff;
+      --accent-hover: #0051d5;
+      --danger-color: #ff3b30;
+      --shadow: 0 4px 20px rgba(0,0,0,0.08);
+      
+      /* iOS 毛玻璃效果变量 - 浅色模式 */
+      --glass-opacity: 0.85;
+      --ios-glass-bg: rgba(255, 255, 255, var(--glass-opacity));
+      --ios-glass-border: rgba(255, 255, 255, 0.5);
+      --ios-blur: blur(20px) saturate(180%);
+      --ios-overlay-bg: rgba(0, 0, 0, 0.4);
+      
+      /* 全屏模式背景 - 默认渐变 */
+      --fullscreen-bg-start: #e8e8ed;
+      --fullscreen-bg-mid: #f2f2f7;
+      --fullscreen-bg-end: #e8e8ed;
+      
+      /* 玻璃效果 */
+      --glass-bg: rgba(255, 255, 255, 0.25);
+      --glass-bg-hover: rgba(255, 255, 255, 0.35);
+      --glass-border: rgba(255, 255, 255, 0.5);
+      --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      --glass-highlight: rgba(255, 255, 255, 0.2);
+      
+      /* 文本框大小变量 - 可调整 */
+      --msg-font-size: 16px;
+      --msg-line-height: 1.5;
+      --msg-max-width: 85%;
+      --msg-padding: 14px 18px;
+      --msg-border-radius: 20px;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #000000;
+      --bg-secondary: #1c1c1e;
+      --bg-chat: #1c1c1e;
+      --text-primary: #ffffff;
+      --text-secondary: #98989f;
+      --border-color: rgba(255,255,255,0.15);
+      --user-msg-bg: #2c2c2e;
+      --user-msg-border: #3a3a3c;
+      --ai-msg-bg: #1c1c1e;
+      --accent-color: #0a84ff;
+      --accent-hover: #409cff;
+      --danger-color: #ff453a;
+      --shadow: 0 4px 20px rgba(0,0,0,0.3);
+      
+      /* iOS 毛玻璃效果变量 - 深色模式 */
+      --ios-glass-bg: rgba(40, 40, 40, var(--glass-opacity));
+      --ios-glass-border: rgba(255, 255, 255, 0.15);
+      --ios-blur: blur(25px) saturate(180%);
+      --ios-overlay-bg: rgba(0, 0, 0, 0.6);
+      
+      --fullscreen-bg-start: #000000;
+      --fullscreen-bg-mid: #0c0c0e;
+      --fullscreen-bg-end: #000000;
+      
+      --glass-bg: rgba(30, 30, 30, 0.65);
+      --glass-bg-hover: rgba(45, 45, 45, 0.75);
+      --glass-border: rgba(255, 255, 255, 0.12);
+      --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      --glass-highlight: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      padding: 15px;
+      background: var(--bg-primary);
+      margin: 0;
+      color: var(--text-primary);
+      height: 100vh;
+      height: 100dvh; /* 移动端视口高度修复 */
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      touch-action: manipulation; /* 防止移动端双击缩放 */
+    }
+
+    /* 网络状态提示条 */
+    .network-status {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: var(--danger-color);
+      color: white;
+      text-align: center;
+      padding: 8px;
+      font-size: 14px;
+      z-index: 10000;
+      transform: translateY(-100%);
+      transition: transform 0.3s ease;
+    }
+    
+    .network-status.show {
+      transform: translateY(0);
+    }
+    
+    .network-status.offline {
+      background: #ff9500;
+    }
+
+    /* 全屏模式样式 - 支持自定义背景图 */
+    body.fullscreen-mode {
+      padding: 0;
+      background: linear-gradient(135deg, var(--fullscreen-bg-start) 0%, var(--fullscreen-bg-mid) 50%, var(--fullscreen-bg-end) 100%);
+      background-attachment: fixed;
+      background-size: cover;
+      background-position: center;
+    }
+
+    body.fullscreen-mode.custom-bg {
+      background-image: var(--custom-bg-image);
+      background-blend-mode: overlay;
+    }
+
+    body.fullscreen-mode.custom-bg::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--ios-overlay-bg);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    body.fullscreen-mode .header,
+    body.fullscreen-mode .model-selector-container,
+    body.fullscreen-mode #chat,
+    body.fullscreen-mode #input-area,
+    body.fullscreen-mode .capsule-toolbar,
+    body.fullscreen-mode .bottom-actions {
+      position: relative;
+      z-index: 1;
+    }
+
+    body.fullscreen-mode .header {
+      display: none;
+    }
+
+    body.fullscreen-mode #chat {
+      border: none;
+      background: transparent;
+      box-shadow: none;
+      border-radius: 0;
+      padding-bottom: 160px;
+    }
+
+    body.fullscreen-mode .model-selector-container {
+      display: none;
+    }
+
+    body.fullscreen-mode .bottom-actions {
+      display: none;
+    }
+
+    body.fullscreen-mode #input-area {
+      position: fixed;
+      bottom: 75px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 92%;
+      max-width: 800px;
+      z-index: 100;
+    }
+
+    body.fullscreen-mode #chat {
+      margin-bottom: 0;
+      padding-top: 20px;
+    }
+
+    /* Glassmorphism 胶囊工具栏 */
+    .capsule-toolbar {
+      display: none;
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      padding: 6px;
+      gap: 6px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(30px) saturate(200%);
+      -webkit-backdrop-filter: blur(30px) saturate(200%);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      box-shadow: var(--glass-shadow);
+    }
+
+    body.fullscreen-mode .capsule-toolbar {
+      display: flex;
+    }
+
+    .capsule-btn {
+      padding: 8px 14px;
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      background: var(--glass-highlight);
+      color: var(--text-primary);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      -webkit-tap-highlight-color: transparent; /* 移除移动端点击高亮 */
+    }
+
+    [data-theme="dark"] .capsule-btn {
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+
+    .capsule-btn:hover {
+      background: var(--glass-bg-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      border-color: rgba(10, 132, 255, 0.5);
+    }
+
+    .capsule-btn:active {
+      transform: translateY(0) scale(0.95);
+      background: var(--glass-bg);
+    }
+
+    /* 全屏模式下的输入框玻璃效果 */
+    body.fullscreen-mode .textarea-wrapper {
+      background: var(--glass-bg);
+      backdrop-filter: blur(30px) saturate(200%);
+      -webkit-backdrop-filter: blur(30px) saturate(200%);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      box-shadow: var(--glass-shadow);
+      padding: 4px;
+      transition: all 0.3s ease;
+    }
+
+    body.fullscreen-mode .textarea-wrapper:focus-within {
+      background: var(--glass-bg-hover);
+      border-color: rgba(10, 132, 255, 0.4);
+      box-shadow: 0 8px 40px rgba(10, 132, 255, 0.15);
+    }
+
+    body.fullscreen-mode #inp {
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      text-shadow: 0 1px 1px rgba(0,0,0,0.05);
+    }
+
+    [data-theme="dark"] body.fullscreen-mode #inp {
+      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+
+    body.fullscreen-mode #inp::placeholder {
+      color: var(--text-secondary);
+      opacity: 0.7;
+    }
+
+    body.fullscreen-mode #send-btn {
+      background: rgba(10, 132, 255, 0.85);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 4px 20px rgba(10, 132, 255, 0.3);
+    }
+
+    body.fullscreen-mode #send-btn:hover {
+      background: rgba(10, 132, 255, 0.95);
+      transform: scale(1.02);
+      box-shadow: 0 6px 24px rgba(10, 132, 255, 0.4);
+    }
+
+    /* Header & Controls */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    h2 {
+      margin: 0;
+      font-weight: 700;
+      font-size: 1.3rem;
+      color: var(--text-primary);
+      letter-spacing: -0.5px;
+    }
+
+    .header-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .icon-btn {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 8px 12px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-size: 14px;
+      transition: all 0.2s;
+      font-weight: 500;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .icon-btn:hover {
+      background: var(--accent-color);
+      color: white;
+      border-color: var(--accent-color);
+      transform: scale(1.05);
+    }
+
+    .icon-btn:active {
+      transform: scale(0.95);
+    }
+
+    .icon-btn.active {
+      background: var(--accent-color);
+      color: white;
+    }
+
+    /* Settings Panel */
+    .settings-panel {
+      display: none;
+      background: var(--ios-glass-bg);
+      backdrop-filter: var(--ios-blur);
+      -webkit-backdrop-filter: var(--ios-blur);
+      border: 1px solid var(--ios-glass-border);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 10px;
+      box-shadow: var(--shadow);
+      position: relative;
+      z-index: 200;
+      flex-shrink: 0;
+    }
+
+    .settings-panel.active {
+      display: block;
+    }
+
+    .appearance-settings-panel {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      max-width: 420px;
+      max-height: 85vh;
+      overflow-y: auto;
+      background: var(--ios-glass-bg);
+      backdrop-filter: var(--ios-blur);
+      -webkit-backdrop-filter: var(--ios-blur);
+      border: 1px solid var(--ios-glass-border);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      z-index: 1001;
+      animation: popupAppear 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes popupAppear {
+      from { 
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.9);
+      }
+      to { 
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+    }
+
+    .appearance-settings-panel.active {
+      display: block;
+    }
+
+    body.fullscreen-mode .appearance-settings-panel {
+      top: auto;
+      bottom: 140px;
+      transform: translateX(-50%);
+      animation: slideUpFullscreen 0.3s ease;
+    }
+
+    @keyframes slideUpFullscreen {
+      from { 
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+      }
+      to { 
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+    }
+
+    .setting-item {
+      margin-bottom: 12px;
+    }
+
+    .setting-item label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+    }
+
+    .setting-item input[type="text"],
+    .setting-item input[type="number"],
+    .setting-item textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 14px;
+      -webkit-appearance: none;
+    }
+
+    .setting-item textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+
+    .setting-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .setting-row .setting-item {
+      flex: 1;
+      min-width: 140px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      margin-top: 4px;
+      -webkit-appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border-color);
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent-color);
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      border: 2px solid white;
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+    }
+
+    input[type="range"]::-webkit-slider-thumb:active {
+      transform: scale(0.95);
+    }
+
+    [data-theme="dark"] input[type="range"]::-webkit-slider-thumb {
+      border-color: rgba(255,255,255,0.8);
+    }
+
+    .range-value {
+      float: right;
+      font-size: 12px;
+      color: var(--accent-color);
+      font-weight: 700;
+      background: rgba(10, 132, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    .model-selector-container {
+      position: relative;
+      margin-bottom: 10px;
+      z-index: 50;
+      flex-shrink: 0;
+    }
+
+    .model-display {
+      padding: 14px 20px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      cursor: pointer;
+      font-size: 17px;
+      color: var(--text-primary);
+      user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow);
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    #settings-model-display {
+      margin-top: 8px;
+      font-size: 15px;
+      padding: 12px 16px;
+    }
+
+    .model-display:hover {
+      transform: scale(1.01);
+      box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+    }
+
+    .model-display:active {
+      transform: scale(0.99);
+    }
+
+    .model-display::after {
+      content: '▼';
+      font-size: 10px;
+      color: var(--accent-color);
+      transition: transform 0.3s ease;
+      margin-left: 8px;
+    }
+
+    .model-display.active::after {
+      transform: rotate(180deg);
+    }
+
+    .model-loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(10,132,255,0.2);
+      border-top-color: var(--accent-color);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-left: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .model-popup-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--ios-overlay-bg);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      z-index: 100;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .model-popup-overlay.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .model-popup {
+      width: 100%;
+      max-width: 400px;
+      max-height: 70vh;
+      background: var(--ios-glass-bg);
+      backdrop-filter: var(--ios-blur);
+      -webkit-backdrop-filter: var(--ios-blur);
+      border-radius: 24px;
+      border: 1px solid var(--ios-glass-border);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: popupSlide 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes popupSlide {
+      from { 
+        opacity: 0;
+        transform: scale(0.9) translateY(20px);
+      }
+      to { 
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .model-popup-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255,255,255,0.1);
+    }
+
+    [data-theme="dark"] .model-popup-header {
+      background: rgba(0,0,0,0.1);
+    }
+
+    .model-popup-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+
+    .model-popup-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(0,0,0,0.1);
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      transition: all 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    [data-theme="dark"] .model-popup-close {
+      background: rgba(255,255,255,0.1);
+      color: var(--text-secondary);
+    }
+
+    .model-popup-close:hover {
+      background: var(--accent-color);
+      color: white;
+      transform: scale(1.1);
+    }
+
+    .model-popup-content {
+      padding: 20px;
+      overflow-y: auto;
+      max-height: 50vh;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .model-search-container {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .model-search-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 16px;
+      color: var(--text-secondary);
+      opacity: 0.6;
+    }
+
+    .model-search {
+      width: 100%;
+      padding: 12px 16px 12px 42px;
+      border: none;
+      border-radius: 12px;
+      background: rgba(0,0,0,0.05);
+      color: var(--text-primary);
+      font-size: 17px;
+      outline: none;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    [data-theme="dark"] .model-search {
+      background: rgba(255,255,255,0.1);
+      color: var(--text-primary);
+    }
+
+    .model-search:focus {
+      background: rgba(0,0,0,0.08);
+      box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.15);
+    }
+
+    [data-theme="dark"] .model-search:focus {
+      background: rgba(255,255,255,0.15);
+    }
+
+    .model-search::placeholder {
+      color: var(--text-secondary);
+      opacity: 0.6;
+    }
+
+    .model-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .model-option-card {
+      padding: 16px 20px;
+      background: rgba(0,0,0,0.03);
+      border: 1px solid transparent;
+      border-radius: 14px;
+      cursor: pointer;
+      font-size: 16px;
+      color: var(--text-primary);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 500;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    [data-theme="dark"] .model-option-card {
+      background: rgba(255,255,255,0.05);
+      color: var(--text-primary);
+    }
+
+    .model-option-card:hover {
+      background: rgba(10, 132, 255, 0.1);
+      border-color: rgba(10, 132, 255, 0.3);
+      transform: translateX(4px);
+    }
+
+    .model-option-card:active {
+      transform: scale(0.98);
+    }
+
+    .model-option-card.selected {
+      background: rgba(10, 132, 255, 0.15);
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+      font-weight: 600;
+    }
+
+    .model-option-card.selected::after {
+      content: '✓';
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    /* Chat Container */
+    #chat {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      padding: 16px;
+      margin: 10px 0;
+      background: var(--bg-chat);
+      border-radius: 20px;
+      position: relative;
+      box-shadow: var(--shadow);
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .msg {
+      padding: var(--msg-padding);
+      margin: 12px 0;
+      border-radius: var(--msg-border-radius);
+      max-width: var(--msg-max-width);
+      word-break: break-word;
+      position: relative;
+      line-height: var(--msg-line-height);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      border: 1px solid var(--border-color);
+      font-size: var(--msg-font-size);
+      min-width: 150px;
+      min-height: 60px;
+      overflow: visible;
+      transition: all 0.3s ease;
+      animation: messageAppear 0.3s ease;
+    }
+
+    @keyframes messageAppear {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .msg.resizable {
+      resize: both;
+    }
+
+    .user {
+      background: var(--user-msg-bg);
+      border-color: var(--user-msg-border);
+      margin-left: auto;
+      text-align: left;
+      border-bottom-right-radius: 6px;
+    }
+
+    .ai {
+      background: var(--ai-msg-bg);
+      border-color: var(--border-color);
+      color: var(--text-primary);
+      border-bottom-left-radius: 6px;
+    }
+
+    body.fullscreen-mode .msg {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px) saturate(180%);
+      border-color: var(--glass-border);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+
+    body.fullscreen-mode .user {
+      background: rgba(10, 132, 255, 0.2);
+      border-color: rgba(10, 132, 255, 0.35);
+    }
+
+    [data-theme="dark"] body.fullscreen-mode .user {
+      background: rgba(10, 132, 255, 0.3);
+      border-color: rgba(10, 132, 255, 0.45);
+    }
+
+    .msg:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+
+    .msg-actions {
+      display: none;
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: var(--ios-glass-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid var(--ios-glass-border);
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      z-index: 20;
+      overflow: hidden;
+      padding: 2px;
+      gap: 2px;
+      flex-direction: row;
+    }
+
+    .msg:hover .msg-actions { 
+      display: flex; 
+    }
+
+    .msg-actions button {
+      padding: 6px 8px;
+      font-size: 13px;
+      border: none;
+      background: rgba(255,255,255,0.3);
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: all 0.2s;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      height: 28px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    [data-theme="dark"] .msg-actions button {
+      background: rgba(0,0,0,0.2);
+    }
+
+    .msg-actions button:hover {
+      background: rgba(10, 132, 255, 0.2);
+      color: var(--accent-color);
+      transform: scale(1.05);
+    }
+
+    .msg-actions button:active {
+      transform: scale(0.9);
+    }
+
+    .msg-text p { margin: 0 0 10px 0; }
+    .msg-text p:last-child { margin-bottom: 0; }
+    
+    .msg-text h1, .msg-text h2, .msg-text h3 { 
+      margin: 12px 0 8px 0; 
+      color: var(--text-primary);
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 4px;
+    }
+    
+    .msg-text ul, .msg-text ol { 
+      margin: 8px 0; 
+      padding-left: 20px; 
+    }
+    
+    .msg-text li { margin: 4px 0; }
+    
+    .msg-text code {
+      background: rgba(0,0,0,0.06);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+      font-size: 0.85em;
+      font-weight: 600;
+    }
+
+    [data-theme="dark"] .msg-text code {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .msg-text pre {
+      background: #1c1c1e;
+      color: #f5f5f7;
+      padding: 16px;
+      border-radius: 16px;
+      overflow-x: auto;
+      margin: 10px 0;
+      position: relative;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .msg-text pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+      font-weight: normal;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      opacity: 0;
+      transition: opacity 0.2s;
+      backdrop-filter: blur(10px);
+    }
+
+    .msg-text pre:hover .copy-btn { opacity: 1; }
+    .copy-btn:hover { background: rgba(255,255,255,0.3); }
+    .copy-btn.copied { background: #34c759 !important; opacity: 1; }
+
+    #input-area {
+      display: flex;
+      gap: 10px;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .textarea-wrapper {
+      flex: 1;
+      position: relative;
+      min-height: 52px;
+    }
+
+    #inp {
+      width: 100%;
+      padding: 14px 44px 14px 18px;
+      font-size: var(--msg-font-size);
+      border: 1px solid var(--border-color);
+      border-radius: 24px;
+      outline: none;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      resize: vertical;
+      min-height: 52px;
+      max-height: 200px;
+      height: auto;
+      font-family: inherit;
+      line-height: var(--msg-line-height);
+      box-shadow: var(--shadow);
+      transition: all 0.3s ease;
+      -webkit-appearance: none;
+    }
+
+    #inp:focus {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 4px rgba(10, 132, 255, 0.15);
+    }
+
+    .input-actions {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      display: flex;
+      gap: 6px;
+    }
+
+    .mic-btn, .send-icon {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
+      color: var(--text-secondary);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      transition: all 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .mic-btn:hover, .send-icon:hover {
+      background: rgba(0,0,0,0.05);
+      color: var(--accent-color);
+    }
+
+    .mic-btn.recording {
+      color: #ff3b30;
+      animation: pulse 1.5s infinite;
+      background: rgba(255, 59, 48, 0.1);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.1); }
+    }
+
+    #send-btn {
+      padding: 14px 24px;
+      font-size: 16px;
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      border-radius: 24px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3);
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    #send-btn:hover:not(:disabled) {
+      transform: scale(1.03);
+      background: var(--accent-hover);
+      box-shadow: 0 6px 16px rgba(10, 132, 255, 0.4);
+    }
+
+    #send-btn:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+
+    #send-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+      background: var(--text-secondary);
+    }
+
+    .bottom-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+      flex-shrink: 0;
+    }
+
+    .secondary-btn {
+      flex: 1;
+      padding: 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 15px;
+      transition: all 0.2s;
+      font-weight: 500;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .secondary-btn:hover {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+      background: rgba(10, 132, 255, 0.05);
+      transform: translateY(-1px);
+    }
+
+    .secondary-btn:active {
+      transform: translateY(0) scale(0.98);
+    }
+
+    .thinking {
+      display: flex;
+      gap: 6px;
+      padding: 4px 0;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      background: var(--text-secondary);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+
+    .dot:nth-child(1) { animation-delay: -0.32s; }
+    .dot:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    body.fullscreen-mode #model-popup {
+      padding: 24px;
+      border-radius: 28px;
+    }
+
+    body.fullscreen-mode #popup-model-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    body.fullscreen-mode #popup-model-list .model-option-card {
+      padding: 18px 22px;
+      border-radius: 16px;
+      margin-bottom: 4px;
+      font-size: 17px;
+      background: var(--glass-highlight);
+      border: 1px solid var(--glass-border);
+    }
+
+    body.fullscreen-mode #popup-model-list .model-option-card:hover {
+      background: rgba(10, 132, 255, 0.15);
+      transform: translateX(4px) scale(1.02);
+    }
+
+    body.fullscreen-mode #popup-model-search {
+      padding: 14px 16px 14px 44px;
+      margin-bottom: 16px;
+      border-radius: 14px;
+      font-size: 17px;
+      background: var(--glass-highlight);
+      border: 1px solid var(--glass-border);
+      color: var(--text-primary);
+    }
+
+    .export-import-popup {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      max-width: 400px;
+      background: var(--ios-glass-bg);
+      backdrop-filter: var(--ios-blur);
+      -webkit-backdrop-filter: var(--ios-blur);
+      border: 1px solid var(--ios-glass-border);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      z-index: 1001;
+      animation: popupAppear 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .export-import-popup.active {
+      display: block;
+    }
+
+    .export-import-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .export-import-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    .export-import-btn {
+      width: 100%;
+      padding: 14px;
+      margin-bottom: 12px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      color: var(--text-primary);
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 500;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .export-import-btn:hover {
+      background: rgba(10, 132, 255, 0.1);
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+      transform: translateY(-1px);
+    }
+
+    .export-import-btn.primary {
+      background: var(--accent-color);
+      color: white;
+      border-color: var(--accent-color);
+    }
+
+    .export-import-btn.primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .export-import-btn.danger {
+      color: var(--danger-color);
+      border-color: rgba(255, 59, 48, 0.3);
+    }
+
+    .export-import-btn.danger:hover {
+      background: rgba(255, 59, 48, 0.1);
+      border-color: var(--danger-color);
+    }
+
+    .hidden-file-input {
+      display: none;
+    }
+
+    .bg-preview {
+      width: 100%;
+      height: 150px;
+      border-radius: 12px;
+      background: var(--bg-primary);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+      background-size: cover;
+      background-position: center;
+      border: 2px dashed var(--border-color);
+    }
+
+    .bg-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .bg-preview-placeholder {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .bg-input-group {
+      margin-bottom: 16px;
+    }
+
+    .bg-input-group label {
+      display: block;
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .bg-input-group input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+
+    .bg-input-group input::placeholder {
+      color: var(--text-secondary);
+      opacity: 0.6;
+    }
+
+    .upload-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+      transition: all 0.2s;
+    }
+
+    .upload-btn:hover {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+    }
+
+    .reset-size-btn {
+      font-size: 12px;
+      color: var(--accent-color);
+      cursor: pointer;
+      margin-left: 10px;
+      text-decoration: underline;
+      opacity: 0.8;
+    }
+
+    .reset-size-btn:hover {
+      opacity: 1;
+    }
+
+    #popup-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--ios-overlay-bg);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      z-index: 1000;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .appearance-hint {
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: rgba(10, 132, 255, 0.1);
+      border-radius: 10px;
+      border: 1px solid rgba(10, 132, 255, 0.2);
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    /* 移动端优化 */
+    @media (max-width: 640px) {
+      body {
+        padding: 10px;
+      }
+      
+      .msg { 
+        max-width: 95%; 
+        resize: none !important;
+        margin: 8px 0;
+      }
+      
+      .setting-row { 
+        flex-direction: column; 
+        gap: 0; 
+      }
+      
+      .header-controls {
+        width: 100%;
+        justify-content: flex-end;
+      }
+      
+      .icon-btn {
+        padding: 6px 10px;
+        font-size: 13px;
+      }
+      
+      body.fullscreen-mode .capsule-toolbar {
+        padding: 5px;
+        gap: 5px;
+        overflow-x: auto;
+        max-width: 98%;
+        scrollbar-width: none;
+        bottom: 12px;
+      }
+      
+      .capsule-toolbar::-webkit-scrollbar {
+        display: none;
+      }
+      
+      .capsule-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+      }
+
+      body.fullscreen-mode #input-area {
+        width: 95%;
+        bottom: 65px;
+      }
+
+      body.fullscreen-mode #chat {
+        padding-bottom: 140px;
+        padding-top: 10px;
+      }
+
+      .model-popup {
+        max-height: 80vh;
+        border-radius: 20px;
+        width: 95%;
+      }
+      
+      .appearance-settings-panel {
+        width: 95%;
+        max-height: 85vh;
+        padding: 16px;
+        bottom: 100px;
+      }
+      
+      .msg-actions {
+        top: 4px;
+        right: 4px;
+        opacity: 0.9;
+      }
+      
+      .msg-actions button {
+        padding: 4px 6px;
+        font-size: 12px;
+        min-width: 24px;
+        height: 24px;
+      }
+
+      #send-btn {
+        padding: 12px 20px;
+      }
+      
+      h2 {
+        font-size: 1.1rem;
+      }
+    }
+
+    /* 防止 iOS 缩放 */
+    @supports (-webkit-touch-callout: none) {
+      input, textarea, select {
+        font-size: 16px !important;
+      }
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-secondary);
+    }
+
+    ::-webkit-resizer {
+      background: var(--accent-color);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 网络状态提示 -->
+<div id="network-status" class="network-status">
+  <span id="network-text">网络连接已断开</span>
+</div>
+
+<div class="header">
+  <h2>✨ LightField AI Chat</h2>
+  <div class="header-controls">
+    <button class="icon-btn" onclick="toggleFullscreen()" title="全屏模式" id="fullscreen-btn"> 全屏</button>
+    <button class="icon-btn" onclick="toggleSettings()" title="设置"> 设置</button>
+    <button class="icon-btn" onclick="toggleAppearanceSettings()" title="外观设置"> 外观</button>
+    <button class="icon-btn" onclick="toggleTheme()" title="切换主题"> 主题</button>
+    <button class="icon-btn" onclick="showAnnouncement()" title="公告"> 公告</button>
+    <button class="icon-btn" onclick="toggleExportImport()" title="导出/导入聊天记录"> 存取</button>
+  </div>
+</div>
+
+<!-- 外观设置面板 -->
+<div id="appearance-settings-panel" class="appearance-settings-panel">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color);">
+    <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--text-primary);"> 外观设置</h3>
+    <button onclick="toggleAppearanceSettings()" style="background: none; border: none; cursor: pointer; font-size: 18px; color: var(--text-secondary); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">✕</button>
+  </div>
+
+  <div class="setting-row">
+    <div class="setting-item">
+      <label>字体大小 <span class="range-value" id="font-size-value">16px</span></label>
+      <input type="range" id="font-size-slider" min="12" max="24" step="1" value="16" oninput="updateAppearanceSettings()">
+    </div>
+    <div class="setting-item">
+      <label>最大宽度 <span class="range-value" id="max-width-value">85%</span></label>
+      <input type="range" id="max-width-slider" min="50" max="100" step="5" value="85" oninput="updateAppearanceSettings()">
+    </div>
+  </div>
+
+  <div class="setting-row">
+    <div class="setting-item">
+      <label>内边距 <span class="range-value" id="padding-value">16px</span></label>
+      <input type="range" id="padding-slider" min="4" max="32" step="2" value="16" oninput="updateAppearanceSettings()">
+    </div>
+    <div class="setting-item">
+      <label>圆角 <span class="range-value" id="radius-value">20px</span></label>
+      <input type="range" id="radius-slider" min="4" max="32" step="2" value="20" oninput="updateAppearanceSettings()">
+    </div>
+  </div>
+
+  <div class="setting-item">
+    <label>行高 <span class="range-value" id="line-height-value">1.5</span></label>
+    <input type="range" id="line-height-slider" min="1" max="2" step="0.1" value="1.5" oninput="updateAppearanceSettings()">
+  </div>
+
+  <div class="setting-item" style="margin-top:12px;">
+    <label>毛玻璃透明度 <span class="range-value" id="glass-opacity-value">85%</span></label>
+    <input type="range" id="glass-opacity-slider" min="10" max="100" step="5" value="85" oninput="updateGlassOpacity()">
+  </div>
+
+  <div class="appearance-hint">
+    <strong> 提示：</strong>拖动消息框右下角可手动调整单条消息大小。以上设置应用到所有消息框。
+  </div>
+
+  <div style="margin-top: 12px; text-align: right;">
+    <span class="reset-size-btn" onclick="resetAppearanceSettings()">恢复默认</span>
+  </div>
+</div>
+
+<!-- Settings Panel -->
+<div id="settings-panel" class="settings-panel">
+  <div class="setting-item">
+    <label>模型选择 <span id="model-loading-indicator" style="display:none;" class="model-loading"></span></label>
+    <div id="settings-model-display" class="model-display" onclick="toggleModelPopup()" style="margin-top: 8px;">
+      加载模型中...
+    </div>
+    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 6px; display: flex; justify-content: space-between; align-items: center;">
+      <span id="model-status-text">正在连接服务器...</span>
+      <span class="reset-size-btn" onclick="retryFetchModels()" style="margin-left: 10px;">刷新模型</span>
+    </div>
+  </div>
+  <div class="setting-item">
+    <label>系统提示词 (System Prompt)</label>
+    <textarea id="system-prompt" placeholder="输入系统提示词，设定 AI 的角色和行为..."></textarea>
+  </div>
+  <div class="setting-row">
+    <div class="setting-item">
+      <label>温度 (Temperature) <span class="range-value" id="temp-value">0.7</span></label>
+      <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7" oninput="updateRangeValue('temperature', 'temp-value')">
+    </div>
+    <div class="setting-item">
+      <label>最大 Token <span class="range-value" id="token-value">4096</span></label>
+      <input type="range" id="max-tokens" min="512" max="8192" step="512" value="4096" oninput="updateRangeValue('max-tokens', 'token-value')">
+    </div>
+  </div>
+</div>
+
+<!-- 普通模式下的模型选择器 -->
+<div class="model-selector-container" id="normal-model-selector">
+  <div id="model-display" class="model-display" onclick="toggleModelPopup()">加载模型中...</div>
+</div>
+
+<!-- iOS 风格毛玻璃模型选择弹窗 -->
+<div id="model-popup-overlay" class="model-popup-overlay" onclick="closeModelPopup(event)">
+  <div class="model-popup" onclick="event.stopPropagation()">
+    <div class="model-popup-header">
+      <h3 class="model-popup-title">选择模型</h3>
+      <button class="model-popup-close" onclick="closeModelPopup()">✕</button>
+    </div>
+    <div class="model-popup-content">
+      <div class="model-search-container">
+        <span class="model-search-icon"></span>
+        <input type="text" class="model-search" id="model-search-input" placeholder="搜索模型..." oninput="filterPopupModels(this.value)">
+      </div>
+      <div id="model-list" class="model-list"></div>
+    </div>
+  </div>
+</div>
+
+<div id="chat"></div>
+
+<div id="input-area">
+  <div class="textarea-wrapper">
+    <textarea id="inp" placeholder="输入问题...
+ (可拖拽右下角调整大小)" disabled></textarea>
+    <div class="input-actions">
+      <button class="mic-btn" id="mic-btn" onclick="toggleVoiceInput()" title="语音输入"></button>
+    </div>
+  </div>
+  <button id="send-btn" onclick="handleSendClick()" disabled>发送</button>
+</div>
+
+<!-- 全屏模式下的胶囊工具栏 -->
+<div class="capsule-toolbar" id="capsule-toolbar">
+  <button class="capsule-btn" onclick="toggleModelSelectorPopup()" title="切换模型">
+    AI <span id="capsule-model-name">模型</span>
+  </button>
+  <button class="capsule-btn" onclick="toggleFullscreen()" title="退出全屏">
+     退出
+  </button>
+  <button class="capsule-btn" onclick="toggleSettings()" title="设置">
+     设置
+  </button>
+  <button class="capsule-btn" onclick="toggleAppearanceSettings()" title="外观">
+     外观
+  </button>
+  <button class="capsule-btn" onclick="toggleTheme()" title="切换主题">
+     主题
+  </button>
+  <button class="capsule-btn" onclick="showAnnouncement()" title="公告">
+     公告
+  </button>
+  <button class="capsule-btn" onclick="toggleExportImport()" title="导出/导入聊天记录">
+     存取
+  </button>
+  <button class="capsule-btn" onclick="toggleBackgroundSettings()" title="设置背景图">
+     背景
+  </button>
+  <button class="capsule-btn" onclick="clearChat()" title="清空对话">
+     清空
+  </button>
+</div>
+
+<!-- 模型选择弹窗（全屏模式下） -->
+<div id="model-popup" class="settings-panel" style="display: none; position: fixed; bottom: 150px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; max-height: 400px; overflow-y: auto; z-index: 99;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 0 4px;">
+    <strong style="color: var(--text-primary);">选择模型</strong>
+    <button onclick="toggleModelSelectorPopup()" style="background: none; border: none; cursor: pointer; font-size: 18px; color: var(--text-secondary);">✕</button>
+  </div>
+  <input type="text" id="popup-model-search" placeholder="搜索模型..." oninput="filterPopupModels(this.value)" style="width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.1); color: var(--text-primary);">
+  <div id="popup-model-list"></div>
+</div>
+
+<!-- 导出导入弹窗 -->
+<div id="export-import-popup" class="export-import-popup">
+  <div class="export-import-header">
+    <h3 class="export-import-title"> 聊天记录管理</h3>
+    <button onclick="toggleExportImport()" style="background: none; border: none; cursor: pointer; font-size: 20px; color: var(--text-secondary);">✕</button>
+  </div>
+  
+  <button class="export-import-btn primary" onclick="exportChatToFile()">
+    <span></span> 导出聊天记录 (JSON)
+  </button>
+  
+  <button class="export-import-btn primary" onclick="exportChatToMarkdown()">
+    <span></span> 导出为 Markdown
+  </button>
+  
+  <label class="export-import-btn" style="cursor: pointer; margin-bottom: 12px; display: flex;">
+    <span></span> 导入聊天记录 (JSON)
+    <input type="file" id="import-file-input" class="hidden-file-input" accept=".json" onchange="importChatFromFile(this)">
+  </label>
+  
+  <div style="border-top: 1px solid var(--border-color); margin: 16px 0; padding-top: 16px;">
+    <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; text-align: center;">
+      支持导出为 JSON 格式备份或 Markdown 格式阅读<br>
+      导入仅支持之前导出的 JSON 文件
+    </div>
+    
+    <button class="export-import-btn danger" onclick="clearChat(); toggleExportImport();">
+      <span></span> 清空当前对话
+    </button>
+  </div>
+</div>
+
+<!-- 背景设置弹窗 -->
+<div id="bg-settings-popup" class="export-import-popup">
+  <div class="export-import-header">
+    <h3 class="export-import-title"> 自定义背景</h3>
+    <button onclick="toggleBackgroundSettings()" style="background: none; border: none; cursor: pointer; font-size: 20px; color: var(--text-secondary);">✕</button>
+  </div>
+  
+  <div class="bg-preview" id="bg-preview">
+    <span class="bg-preview-placeholder">暂无背景图</span>
+  </div>
+  
+  <div class="bg-input-group">
+    <label>图片链接地址（URL）</label>
+    <input type="text" id="bg-url-input" placeholder="粘贴图片链接..." oninput="previewBackgroundFromUrl(this.value)">
+  </div>
+  
+  <div style="text-align: center; color: var(--text-secondary); font-size: 13px; margin-bottom: 12px;">
+    或
+  </div>
+  
+  <label class="upload-btn" style="display: flex; align-items: center; justify-content: center; width: 100%; margin-bottom: 16px;">
+    <span></span> 上传本地图片
+    <input type="file" id="bg-file-input" class="hidden-file-input" accept="image/*" onchange="handleBackgroundUpload(this)">
+  </label>
+  
+  <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; text-align: center;">
+    支持 JPG、PNG、GIF 格式，建议尺寸 1920x1080 以上<br>
+    图片仅存储在本地浏览器中
+  </div>
+  
+  <button class="export-import-btn primary" onclick="applyBackground()">
+    <span></span> 应用背景
+  </button>
+  
+  <button class="export-import-btn danger" onclick="clearBackground()">
+    <span></span> 恢复默认背景
+  </button>
+</div>
+
+<!-- 遮罩层 -->
+<div id="popup-overlay" onclick="closeAllPopups()"></div>
+
+<div class="bottom-actions" id="normal-bottom-actions">
+  <button class="secondary-btn" onclick="clearChat()">清空对话</button>
+  <button class="secondary-btn" onclick="regenerateLast()" id="regen-btn" style="display:none">🔄 重新生成</button>
+</div>
+
+<script>
+  // ==================== 配置 ====================
+  const API_KEY = "sk-qrtriqvtphkdpkviyzvwzvktmzwmktbgkasulvmyhultytqr";
+  
+  // 默认模型配置（当API获取失败时使用）
+  const DEFAULT_MODELS = [
+    "deepseek-ai/DeepSeek-V2.5", 
+    "Qwen/Qwen2.5-72B-Instruct",
+    "meta-llama/Meta-Llama-3.1-70B-Instruct",
+    "THUDM/glm-4-9b-chat"
+  ];
+  
+  // ==================== 状态管理 ====================
+  let messages = [];
+  let currentStreamController = null;
+  let allModels = [];
+  let nextId = 1;
+  let systemPrompt = "";
+  let isVoiceRecording = false;
+  let recognition = null;
+  let isFullscreen = false;
+  let currentModel = "";
+  let isOnline = navigator.onLine;
+  let tempBackgroundUrl = null;
+  
+  const defaultAppearance = {
+    fontSize: 16,
+    maxWidth: 85,
+    padding: 16,
+    radius: 20,
+    lineHeight: 1.5,
+    glassOpacity: 85
+  };
+
+  // ==================== 初始化 ====================
+  document.addEventListener('DOMContentLoaded', () => {
+    initNetworkStatus();
+    loadSettings();
+    loadAppearanceSettings();
+    loadGlassOpacity();
+    loadBackgroundSetting();
+    
+    // 先启用输入，使用默认模型，再后台获取模型列表
+    initWithDefaultModels();
+    fetchModels();
+    
+    loadChatFromStorage();
+    initVoiceInput();
+    
+    const textarea = document.getElementById('inp');
+    textarea.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+    });
+    
+    textarea.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendClick();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (isFullscreen) toggleFullscreen();
+        closeModelPopup();
+        closeAllPopups();
+      }
+    });
+
+    // 防止移动端橡皮筋效果
+    document.body.addEventListener('touchmove', function(e) {
+      if (e.target.closest('#chat') || e.target.closest('.model-popup-content')) return;
+      e.preventDefault();
+    }, { passive: false });
+  });
+
+  // ==================== 网络状态管理 ====================
+  function initNetworkStatus() {
+    const statusEl = document.getElementById('network-status');
+    const textEl = document.getElementById('network-text');
+    
+    function updateOnlineStatus() {
+      isOnline = navigator.onLine;
+      if (!isOnline) {
+        statusEl.classList.add('show', 'offline');
+        textEl.textContent = '网络连接已断开，部分功能可能不可用';
+      } else {
+        statusEl.classList.remove('offline');
+        textEl.textContent = '已恢复网络连接';
+        setTimeout(() => {
+          statusEl.classList.remove('show');
+        }, 2000);
+        // 重试获取模型
+        if (allModels.length === 0 || allModels.length <= DEFAULT_MODELS.length) {
+          fetchModels();
+        }
+      }
+    }
+    
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    
+    // 初始检查
+    if (!navigator.onLine) {
+      updateOnlineStatus();
+    }
+  }
+
+  // ==================== 默认模型初始化 ====================
+  function initWithDefaultModels() {
+    // 立即使用默认模型启用界面，不等待 API
+    allModels = [...DEFAULT_MODELS];
+    const savedModel = localStorage.getItem('selected_model');
+    currentModel = savedModel && allModels.includes(savedModel) ? savedModel : allModels[0];
+    
+    renderModelDisplay();
+    enableInput();
+    updateModelStatus('使用离线默认模型，点击刷新获取完整列表');
+  }
+
+  // ==================== 模型获取（带超时） ====================
+  async function fetchModels() {
+    const indicator = document.getElementById('model-loading-indicator');
+    const statusText = document.getElementById('model-status-text');
+    
+    indicator.style.display = 'inline-block';
+    updateModelStatus('正在连接服务器...');
+    
+    try {
+      // 5秒超时
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const res = await fetch("https://api.siliconflow.cn/v1/models", {
+        headers: { "Authorization": "Bearer " + API_KEY },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      
+      const data = await res.json();
+      const newModels = (data.data || []).map(m => m.id).sort();
+      
+      if (newModels.length > 0) {
+        allModels = newModels;
+        
+        // 检查当前选中模型是否在新列表中
+        const savedModel = localStorage.getItem('selected_model');
+        if (savedModel && allModels.includes(savedModel)) {
+          currentModel = savedModel;
+        } else {
+          currentModel = allModels[0];
+          localStorage.setItem('selected_model', currentModel);
+        }
+        
+        renderModelDisplay();
+        renderModelList(allModels);
+        renderFullscreenModelList(allModels);
+        updateModelStatus(`已加载 ${allModels.length} 个模型`);
+        
+        // 显示成功提示（仅在非初始加载时）
+        if (document.getElementById('model-list').children.length > 0) {
+          console.log('模型列表已更新');
+        }
+      }
+    } catch (err) {
+      console.warn("模型加载失败:", err);
+      updateModelStatus('连接失败，使用默认模型（可点击刷新重试）');
+      
+      // 确保至少有默认模型
+      if (allModels.length === 0) {
+        allModels = [...DEFAULT_MODELS];
+        currentModel = allModels[0];
+        renderModelDisplay();
+      }
+    } finally {
+      indicator.style.display = 'none';
+      // 确保输入始终可用
+      enableInput();
+    }
+  }
+
+  function retryFetchModels() {
+    fetchModels();
+  }
+
+  function updateModelStatus(text) {
+    const el = document.getElementById('model-status-text');
+    if (el) el.textContent = text;
+  }
+
+  function renderModelDisplay() {
+    const display = document.getElementById("model-display");
+    const settingsDisplay = document.getElementById("settings-model-display");
+    const displayName = currentModel ? currentModel.split('/').pop() : '默认模型';
+    
+    if (display) display.textContent = displayName;
+    if (settingsDisplay) settingsDisplay.textContent = displayName;
+    
+    updateCapsuleModelName();
+  }
+
+  function renderModelList(models) {
+    const list = document.getElementById("model-list");
+    if (!list) return;
+    
+    list.innerHTML = "";
+    models.forEach(model => {
+      const div = document.createElement("div");
+      div.className = "model-option-card";
+      if (model === currentModel) div.classList.add('selected');
+      div.textContent = model;
+      div.onclick = () => selectModelCard(model);
+      list.appendChild(div);
+    });
+  }
+
+  function renderFullscreenModelList(models) {
+    const list = document.getElementById('popup-model-list');
+    if (!list) return;
+    list.innerHTML = '';
+    models.forEach(model => {
+      const div = document.createElement('div');
+      div.className = 'model-option-card';
+      if (model === currentModel) div.classList.add('selected');
+      div.textContent = model;
+      div.onclick = () => {
+        selectModelCard(model);
+        toggleModelSelectorPopup();
+      };
+      list.appendChild(div);
+    });
+  }
+
+  // ==================== 外观设置（保持原有） ====================
+  function toggleAppearanceSettings() {
+    const panel = document.getElementById('appearance-settings-panel');
+    const overlay = document.getElementById('popup-overlay');
+    
+    if (panel.classList.contains('active')) {
+      panel.classList.remove('active');
+      overlay.style.display = 'none';
+      document.body.style.overflow = '';
+    } else {
+      closeModelPopup();
+      document.getElementById('settings-panel').classList.remove('active');
+      document.getElementById('export-import-popup').classList.remove('active');
+      document.getElementById('bg-settings-popup').classList.remove('active');
+      
+      panel.classList.add('active');
+      overlay.style.display = 'block';
+      document.body.style.overflow = 'hidden';
+    }
+  }
+
+  function updateAppearanceSettings() {
+    const fontSize = document.getElementById('font-size-slider').value;
+    const maxWidth = document.getElementById('max-width-slider').value;
+    const padding = document.getElementById('padding-slider').value;
+    const radius = document.getElementById('radius-slider').value;
+    const lineHeight = document.getElementById('line-height-slider').value;
+    
+    document.getElementById('font-size-value').textContent = fontSize + 'px';
+    document.getElementById('max-width-value').textContent = maxWidth + '%';
+    document.getElementById('padding-value').textContent = padding + 'px';
+    document.getElementById('radius-value').textContent = radius + 'px';
+    document.getElementById('line-height-value').textContent = lineHeight;
+    
+    document.documentElement.style.setProperty('--msg-font-size', fontSize + 'px');
+    document.documentElement.style.setProperty('--msg-max-width', maxWidth + '%');
+    document.documentElement.style.setProperty('--msg-padding', padding + 'px ' + (padding * 1.2) + 'px');
+    document.documentElement.style.setProperty('--msg-border-radius', radius + 'px');
+    document.documentElement.style.setProperty('--msg-line-height', lineHeight);
+    
+    const settings = {
+      fontSize: fontSize,
+      maxWidth: maxWidth,
+      padding: padding,
+      radius: radius,
+      lineHeight: lineHeight
+    };
+    localStorage.setItem('ai_chat_appearance', JSON.stringify(settings));
+  }
+
+  function loadAppearanceSettings() {
+    const saved = localStorage.getItem('ai_chat_appearance');
+    if (saved) {
+      const settings = JSON.parse(saved);
+      document.getElementById('font-size-slider').value = settings.fontSize || defaultAppearance.fontSize;
+      document.getElementById('max-width-slider').value = settings.maxWidth || defaultAppearance.maxWidth;
+      document.getElementById('padding-slider').value = settings.padding || defaultAppearance.padding;
+      document.getElementById('radius-slider').value = settings.radius || defaultAppearance.radius;
+      document.getElementById('line-height-slider').value = settings.lineHeight || defaultAppearance.lineHeight;
+      updateAppearanceSettings();
+    }
+  }
+
+  function resetAppearanceSettings() {
+    document.getElementById('font-size-slider').value = defaultAppearance.fontSize;
+    document.getElementById('max-width-slider').value = defaultAppearance.maxWidth;
+    document.getElementById('padding-slider').value = defaultAppearance.padding;
+    document.getElementById('radius-slider').value = defaultAppearance.radius;
+    document.getElementById('line-height-slider').value = defaultAppearance.lineHeight;
+    
+    updateAppearanceSettings();
+    
+    document.getElementById('glass-opacity-slider').value = defaultAppearance.glassOpacity;
+    document.documentElement.style.setProperty('--glass-opacity', defaultAppearance.glassOpacity / 100);
+    document.getElementById('glass-opacity-value').textContent = defaultAppearance.glassOpacity + '%';
+    
+    localStorage.removeItem('ai_chat_appearance');
+    
+    document.querySelectorAll('.msg').forEach(msg => {
+      msg.style.width = '';
+      msg.style.height = '';
+    });
+    
+    alert('已恢复默认外观设置！');
+  }
+
+  function updateGlassOpacity() {
+    const slider = document.getElementById('glass-opacity-slider');
+    const value = slider.value;
+    const opacity = value / 100;
+    
+    document.getElementById('glass-opacity-value').textContent = value + '%';
+    document.documentElement.style.setProperty('--glass-opacity', opacity);
+    
+    const settings = JSON.parse(localStorage.getItem('ai_chat_appearance') || '{}');
+    settings.glassOpacity = value;
+    localStorage.setItem('ai_chat_appearance', JSON.stringify(settings));
+  }
+
+  function loadGlassOpacity() {
+    const saved = localStorage.getItem('ai_chat_appearance');
+    if (saved) {
+      const settings = JSON.parse(saved);
+      if (settings.glassOpacity) {
+        document.getElementById('glass-opacity-slider').value = settings.glassOpacity;
+        updateGlassOpacity();
+      }
+    }
+  }
+
+  // ==================== 背景设置 ====================
+  function toggleBackgroundSettings() {
+    const popup = document.getElementById('bg-settings-popup');
+    const overlay = document.getElementById('popup-overlay');
+    
+    if (popup.classList.contains('active')) {
+      popup.classList.remove('active');
+      overlay.style.display = 'none';
+      tempBackgroundUrl = null;
+    } else {
+      closeModelPopup();
+      document.getElementById('settings-panel').classList.remove('active');
+      document.getElementById('export-import-popup').classList.remove('active');
+      document.getElementById('appearance-settings-panel').classList.remove('active');
+      
+      popup.classList.add('active');
+      overlay.style.display = 'block';
+      
+      const savedBg = localStorage.getItem('fullscreen_bg_image');
+      if (savedBg) {
+        updateBgPreview(savedBg);
+        document.getElementById('bg-url-input').value = savedBg;
+      }
+    }
+  }
+
+  function previewBackgroundFromUrl(url) {
+    if (!url.trim()) {
+      tempBackgroundUrl = null;
+      const savedBg = localStorage.getItem('fullscreen_bg_image');
+      updateBgPreview(savedBg);
+      return;
+    }
+    tempBackgroundUrl = url;
+    updateBgPreview(url);
+  }
+
+  function handleBackgroundUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+      alert('请选择图片文件');
+      input.value = '';
+      return;
+    }
+    
+    if (file.size > 5 * 1024 * 1024) {
+      alert('图片大小不能超过 5MB');
+      input.value = '';
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      tempBackgroundUrl = e.target.result;
+      updateBgPreview(tempBackgroundUrl);
+      document.getElementById('bg-url-input').value = '[本地图片]';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function updateBgPreview(url) {
+    const preview = document.getElementById('bg-preview');
+    if (!url) {
+      preview.innerHTML = '<span class="bg-preview-placeholder">暂无背景图</span>';
+      preview.style.backgroundImage = '';
+    } else {
+      preview.innerHTML = '';
+      preview.style.backgroundImage = `url(${url})`;
+    }
+  }
+
+  function applyBackground() {
+    if (!tempBackgroundUrl) {
+      alert('请先选择或上传背景图');
+      return;
+    }
+    
+    localStorage.setItem('fullscreen_bg_image', tempBackgroundUrl);
+    applyBackgroundToBody(tempBackgroundUrl);
+    toggleBackgroundSettings();
+    alert('背景设置成功！');
+  }
+
+  function clearBackground() {
+    localStorage.removeItem('fullscreen_bg_image');
+    document.body.classList.remove('custom-bg');
+    document.body.style.removeProperty('--custom-bg-image');
+    updateBgPreview(null);
+    document.getElementById('bg-url-input').value = '';
+    tempBackgroundUrl = null;
+    alert('已恢复默认背景');
+  }
+
+  function loadBackgroundSetting() {
+    const savedBg = localStorage.getItem('fullscreen_bg_image');
+    if (savedBg) {
+      applyBackgroundToBody(savedBg);
+    }
+  }
+
+  function applyBackgroundToBody(url) {
+    document.body.style.setProperty('--custom-bg-image', `url(${url})`);
+    document.body.classList.add('custom-bg');
+  }
+
+  // ==================== 模型选择 ====================
+  function toggleModelPopup() {
+    const overlay = document.getElementById('model-popup-overlay');
+    const displays = document.querySelectorAll('.model-display');
+    
+    if (overlay.classList.contains('active')) {
+      overlay.classList.remove('active');
+      displays.forEach(d => d.classList.remove('active'));
+      document.body.style.overflow = '';
+    } else {
+      overlay.classList.add('active');
+      displays.forEach(d => d.classList.add('active'));
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => document.getElementById('model-search-input').focus(), 100);
+    }
+  }
+
+  function closeModelPopup(event) {
+    if (!event || event.target.id === 'model-popup-overlay' || event.target.closest('.model-popup-close')) {
+      document.getElementById('model-popup-overlay').classList.remove('active');
+      document.querySelectorAll('.model-display').forEach(d => d.classList.remove('active'));
+      document.body.style.overflow = '';
+    }
+  }
+
+  function selectModelCard(model) {
+    currentModel = model;
+    localStorage.setItem('selected_model', model);
+    renderModelDisplay();
+    updateCapsuleModelName();
+    closeModelPopup();
+    
+    const searchValue = document.getElementById('model-search-input')?.value || '';
+    if (searchValue) {
+      filterPopupModels(searchValue);
+    } else {
+      renderModelList(allModels);
+    }
+  }
+
+  function filterPopupModels(query) {
+    const filtered = allModels.filter(m => m.toLowerCase().includes(query.toLowerCase()));
+    renderModelList(filtered);
+    
+    const popupList = document.getElementById('popup-model-list');
+    if (popupList) {
+      popupList.innerHTML = '';
+      filtered.forEach(model => {
+        const div = document.createElement('div');
+        div.className = 'model-option-card';
+        if (model === currentModel) div.classList.add('selected');
+        div.textContent = model;
+        div.onclick = () => {
+          selectModelCard(model);
+          toggleModelSelectorPopup();
+        };
+        popupList.appendChild(div);
+      });
+    }
+  }
+
+  function toggleFullscreen() {
+    isFullscreen = !isFullscreen;
+    document.body.classList.toggle('fullscreen-mode');
+    
+    const btn = document.getElementById('fullscreen-btn');
+    if (isFullscreen) {
+      btn.textContent = '⛶ 退出';
+      btn.classList.add('active');
+      updateCapsuleModelName();
+    } else {
+      btn.textContent = '⛶ 全屏';
+      btn.classList.remove('active');
+      document.getElementById('settings-panel').classList.remove('active');
+      document.getElementById('model-popup').style.display = 'none';
+    }
+  }
+
+  function toggleSettings() {
+    const panel = document.getElementById('settings-panel');
+    panel.classList.toggle('active');
+    
+    if (isFullscreen) {
+      document.getElementById('model-popup').style.display = 'none';
+    }
+  }
+
+  function updateRangeValue(inputId, displayId) {
+    const val = document.getElementById(inputId).value;
+    document.getElementById(displayId).textContent = val;
+    saveSettings();
+  }
+
+  function toggleTheme() {
+    const html = document.documentElement;
+    const current = html.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    
+    const hljsTheme = document.getElementById('hljs-theme');
+    hljsTheme.href = next === 'dark' 
+      ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css'
+      : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
+  }
+
+  function saveSettings() {
+    const settings = {
+      systemPrompt: document.getElementById('system-prompt').value,
+      temperature: document.getElementById('temperature').value,
+      maxTokens: document.getElementById('max-tokens').value
+    };
+    localStorage.setItem('ai_chat_settings', JSON.stringify(settings));
+  }
+
+  function loadSettings() {
+    const saved = localStorage.getItem('ai_chat_settings');
+    const theme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    
+    const hljsTheme = document.getElementById('hljs-theme');
+    hljsTheme.href = theme === 'dark' 
+      ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css'
+      : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
+    
+    if (saved) {
+      const settings = JSON.parse(saved);
+      document.getElementById('system-prompt').value = settings.systemPrompt || '';
+      document.getElementById('temperature').value = settings.temperature || 0.7;
+      document.getElementById('max-tokens').value = settings.maxTokens || 4096;
+      document.getElementById('temp-value').textContent = settings.temperature || 0.7;
+      document.getElementById('token-value').textContent = settings.maxTokens || 4096;
+      systemPrompt = settings.systemPrompt || '';
+    }
+  }
+
+  function toggleModelSelectorPopup() {
+    const popup = document.getElementById('model-popup');
+    if (!popup) return;
+    popup.style.display = popup.style.display === 'none' ? 'block' : 'none';
+    document.getElementById('settings-panel').classList.remove('active');
+  }
+
+  function updateCapsuleModelName() {
+    const current = localStorage.getItem('selected_model') || '';
+    const displayName = current.split('/').pop() || '模型';
+    const capsuleName = document.getElementById('capsule-model-name');
+    if (capsuleName) capsuleName.textContent = displayName;
+  }
+
+  // ==================== 语音输入 ====================
+  function initVoiceInput() {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'zh-CN';
+      
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        const inp = document.getElementById('inp');
+        inp.value += transcript;
+        inp.style.height = 'auto';
+        inp.style.height = Math.min(inp.scrollHeight, 200) + 'px';
+        stopVoiceInput();
+      };
+      
+      recognition.onerror = () => stopVoiceInput();
+      recognition.onend = () => stopVoiceInput();
+    } else {
+      const micBtn = document.getElementById('mic-btn');
+      if (micBtn) micBtn.style.display = 'none';
+    }
+  }
+
+  function toggleVoiceInput() {
+    if (!recognition) return;
+    
+    if (isVoiceRecording) {
+      recognition.stop();
+      stopVoiceInput();
+    } else {
+      recognition.start();
+      isVoiceRecording = true;
+      document.getElementById('mic-btn').classList.add('recording');
+    }
+  }
+
+  function stopVoiceInput() {
+    isVoiceRecording = false;
+    const micBtn = document.getElementById('mic-btn');
+    if (micBtn) micBtn.classList.remove('recording');
+  }
+
+  // ==================== 消息管理 ====================
+  function generateId() { return nextId++; }
+
+  function enableInput() {
+    const inp = document.getElementById("inp");
+    const sendBtn = document.getElementById("send-btn");
+    if (inp) {
+      inp.disabled = false;
+      inp.placeholder = "输入问题... (Shift+Enter 换行)";
+    }
+    if (sendBtn) sendBtn.disabled = false;
+    
+    if (messages.length === 0) {
+      const id = generateId();
+      messages.push({ id, role: "assistant", content: "你好！你有什么要聊的吗？" });
+      addMessageToUI(id, messages[0].content, "ai");
+    }
+    saveChatToStorage();
+  }
+
+  function createMessageElement(id, text, role) {
+    const div = document.createElement("div");
+    div.className = "msg resizable " + role;
+    div.dataset.id = id;
+    div.dataset.role = role;
+    
+    const isStreaming = text === "";
+    div.innerHTML = `
+      <div class="msg-text">${isStreaming ? '<div class="thinking"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>' : renderMarkdown(text)}</div>
+      <div class="msg-actions">
+        ${role === 'ai' ? '<button onclick="regenerateMessage(' + id + ')" title="重新生成"></button>' : ''}
+        <button onclick="editMessage(${id})" title="编辑">编辑</button>
+        <button onclick="deleteMessage(${id})" title="删除">删除</button>
+      </div>
+    `;
+    return div;
+  }
+
+  function renderMarkdown(text) {
+    if (!text) return "";
+    
+    marked.setOptions({
+      breaks: true,
+      gfm: true,
+      headerIds: false,
+      mangle: false
+    });
+    
+    let html = marked.parse(text);
+    html = DOMPurify.sanitize(html);
+    return html;
+  }
+
+  function addMessageToUI(id, text, role) {
+    const div = createMessageElement(id, text, role);
+    document.getElementById("chat").appendChild(div);
+    
+    div.querySelectorAll('pre code').forEach((block) => {
+      hljs.highlightElement(block);
+    });
+    
+    div.querySelectorAll('pre').forEach(pre => {
+      if (!pre.querySelector('.copy-btn')) {
+        const code = pre.querySelector('code')?.textContent || '';
+        const btn = document.createElement('button');
+        btn.className = 'copy-btn';
+        btn.textContent = '📋';
+        btn.onclick = () => copyCode(btn, code);
+        pre.appendChild(btn);
+      }
+    });
+    
+    div.scrollIntoView({ behavior: "smooth", block: "end" });
+    updateRegenerateButton();
+    return div;
+  }
+
+  function updateRegenerateButton() {
+    const lastAi = messages.filter(m => m.role === 'assistant').pop();
+    const regenBtn = document.getElementById('regen-btn');
+    if (regenBtn) {
+      regenBtn.style.display = lastAi ? 'block' : 'none';
+    }
+  }
+
+  // ==================== 对话逻辑 ====================
+  async function handleSendClick() {
+    const btn = document.getElementById("send-btn");
+    if (btn.textContent.trim() === "■") {
+      if (currentStreamController) currentStreamController.abort();
+      return;
+    }
+    await send();
+  }
+
+  async function send(editingId = null) {
+    const inp = document.getElementById("inp");
+    const msg = inp.value.trim();
+    if (!msg) return;
+
+    let userId;
+    if (editingId) {
+      userId = editingId;
+      const msgEl = document.querySelector(`.msg[data-id="${editingId}"]`);
+      msgEl.querySelector(".msg-text").innerHTML = renderMarkdown(msg);
+      const msgObj = messages.find(m => m.id == editingId);
+      if (msgObj) msgObj.content = msg;
+    } else {
+      userId = generateId();
+      messages.push({ id: userId, role: "user", content: msg });
+      addMessageToUI(userId, msg, "user");
+    }
+    
+    inp.value = "";
+    inp.style.height = 'auto';
+    saveChatToStorage();
+
+    const aiId = generateId();
+    const aiDiv = createMessageElement(aiId, "", "ai");
+    document.getElementById("chat").appendChild(aiDiv);
+    const textEl = aiDiv.querySelector(".msg-text");
+
+    let fullResponse = "";
+    currentStreamController = new AbortController();
+    const sendBtn = document.getElementById("send-btn");
+    sendBtn.textContent = "■";
+
+    try {
+      // 检查网络
+      if (!navigator.onLine) {
+        throw new Error("网络已断开，请检查网络连接");
+      }
+
+      const apiMessages = [];
+      
+      const sysPrompt = document.getElementById('system-prompt').value.trim();
+      if (sysPrompt) {
+        apiMessages.push({ role: "system", content: sysPrompt });
+      }
+      
+      const historyMessages = messages
+        .filter(m => m.role === 'user' || m.role === 'assistant')
+        .slice(-10)
+        .map(m => ({ role: m.role, content: m.content }));
+      apiMessages.push(...historyMessages);
+
+      const res = await fetch("https://api.siliconflow.cn/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + API_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: currentModel,
+          messages: apiMessages,
+          stream: true,
+          temperature: parseFloat(document.getElementById('temperature').value),
+          max_tokens: parseInt(document.getElementById('max-tokens').value)
+        }),
+        signal: currentStreamController.signal
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) throw new Error("API Key 无效");
+        if (res.status === 429) throw new Error("请求过于频繁，请稍后再试");
+        if (res.status >= 500) throw new Error("服务器繁忙，请稍后再试");
+        throw new Error(`请求失败 (${res.status})`);
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.substring(6).trim();
+            if (dataStr === '[DONE]') break;
+            try {
+              const json = JSON.parse(dataStr);
+              const content = json.choices?.[0]?.delta?.content || '';
+              if (content) {
+                fullResponse += content;
+                if (!aiDiv._updateTimer) {
+                  aiDiv._updateTimer = setTimeout(() => {
+                    textEl.innerHTML = renderMarkdown(fullResponse) + '<span class="cursor">▊</span>';
+                    textEl.querySelectorAll('pre code').forEach((block) => {
+                      hljs.highlightElement(block);
+                    });
+                    document.getElementById("chat").scrollTop = document.getElementById("chat").scrollHeight;
+                    aiDiv._updateTimer = null;
+                  }, 50);
+                }
+              }
+            } catch (e) {
+              console.warn("Parse error:", dataStr);
+            }
+          }
+        }
+      }
+
+      messages.push({ id: aiId, role: "assistant", content: fullResponse });
+      textEl.innerHTML = renderMarkdown(fullResponse);
+      
+      textEl.querySelectorAll('pre code').forEach((block) => {
+        hljs.highlightElement(block);
+      });
+      
+      textEl.querySelectorAll('pre').forEach(pre => {
+        if (!pre.querySelector('.copy-btn')) {
+          const code = pre.querySelector('code')?.textContent || '';
+          const btn = document.createElement('button');
+          btn.className = 'copy-btn';
+          btn.textContent = '📋';
+          btn.onclick = () => copyCode(btn, code);
+          pre.appendChild(btn);
+        }
+      });
+      
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.error(err);
+        textEl.innerHTML = `<span style="color:#ff3b30">❌ ${err.message}</span>`;
+        messages.push({ id: aiId, role: "assistant", content: "错误：" + err.message });
+      } else {
+        messages.push({ id: aiId, role: "assistant", content: fullResponse });
+        textEl.innerHTML = renderMarkdown(fullResponse);
+      }
+    } finally {
+      sendBtn.textContent = "发送";
+      saveChatToStorage();
+      updateRegenerateButton();
+    }
+  }
+
+  function copyCode(btn, code) {
+    navigator.clipboard.writeText(code).then(() => {
+      btn.textContent = '✅';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = '📋';
+        btn.classList.remove('copied');
+      }, 2000);
+    }).catch(() => {
+      // 降级方案
+      const textArea = document.createElement("textarea");
+      textArea.value = code;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      btn.textContent = '✅';
+      setTimeout(() => btn.textContent = '📋', 2000);
+    });
+  }
+
+  // ==================== 消息操作 ====================
+  function deleteMessage(id) {
+    const el = document.querySelector(`.msg[data-id="${id}"]`);
+    if (!el) return;
+    
+    if (confirm("删除这条消息？后续对话上下文将基于保留的消息继续。")) {
+      el.remove();
+      const index = messages.findIndex(m => m.id == id);
+      if (index !== -1) messages.splice(index, 1);
+      saveChatToStorage();
+      updateRegenerateButton();
+    }
+  }
+
+  function editMessage(id) {
+    const el = document.querySelector(`.msg[data-id="${id}"]`);
+    if (!el) return;
+
+    const currentText = messages.find(m => m.id == id)?.content || '';
+    const role = el.dataset.role;
+
+    const newText = prompt(`编辑${role === 'user' ? '你的提问' : 'AI 的回答'}：`, currentText);
+    if (newText === null || newText.trim() === currentText) return;
+
+    const trimmed = newText.trim();
+    
+    if (role === 'user') {
+      const index = messages.findIndex(m => m.id == id);
+      messages = messages.slice(0, index + 1);
+      messages[index].content = trimmed;
+      
+      const chat = document.getElementById("chat");
+      chat.innerHTML = '';
+      messages.forEach(m => addMessageToUI(m.id, m.content, m.role));
+      
+      document.getElementById("inp").value = trimmed;
+      send(id);
+    } else {
+      const msg = messages.find(m => m.id == id);
+      if (msg) msg.content = trimmed;
+      el.querySelector(".msg-text").innerHTML = renderMarkdown(trimmed);
+      saveChatToStorage();
+    }
+  }
+
+  function regenerateMessage(id) {
+    const index = messages.findIndex(m => m.id == id);
+    if (index <= 0) return;
+    
+    messages = messages.slice(0, index);
+    
+    const chat = document.getElementById("chat");
+    chat.innerHTML = '';
+    messages.forEach(m => addMessageToUI(m.id, m.content, m.role));
+    
+    send();
+  }
+
+  function regenerateLast() {
+    const lastAi = messages.filter(m => m.role === 'assistant').pop();
+    if (lastAi) regenerateMessage(lastAi.id);
+  }
+
+  function clearChat() {
+    if (confirm("确定清空所有对话？此操作不可恢复。")) {
+      document.getElementById("chat").innerHTML = "";
+      messages = [];
+      nextId = 1;
+      localStorage.removeItem('ai_chat_history');
+      updateRegenerateButton();
+      
+      setTimeout(() => {
+        const id = generateId();
+        messages.push({ id, role: "assistant", content: "对话已清空。有什么新的问题吗？" });
+        addMessageToUI(id, messages[0].content, "ai");
+      }, 100);
+    }
+  }
+
+  // ==================== 本地存储 ====================
+  function saveChatToStorage() {
+    const data = {
+      messages: messages,
+      nextId: nextId,
+      timestamp: Date.now(),
+      model: currentModel
+    };
+    localStorage.setItem('ai_chat_history', JSON.stringify(data));
+  }
+
+  function loadChatFromStorage() {
+    const saved = localStorage.getItem('ai_chat_history');
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        if (data.messages && data.messages.length > 0) {
+          messages = data.messages;
+          nextId = data.nextId || messages.length + 1;
+          document.getElementById("chat").innerHTML = '';
+          messages.forEach(m => addMessageToUI(m.id, m.content, m.role));
+          return true;
+        }
+      } catch (e) {
+        console.error("加载历史记录失败", e);
+      }
+    }
+    return false;
+  }
+
+  // ==================== 公告 ====================
+  function showAnnouncement() {
+    alert("📢 公告\n\n✨ 新功能：\n1. 优化了跨设备兼容性，GitHub Pages 托管更稳定\n2. 添加了网络状态监测和自动降级\n3. 模型获取失败时自动使用默认模型\n4. 添加了 API 超时处理（5秒）\n5. 优化了移动端触摸体验\n6. 编辑用户消息后自动重新获取 AI 回复");
+  }
+
+  // ==================== 导入导出 ====================
+  function toggleExportImport() {
+    const popup = document.getElementById('export-import-popup');
+    const overlay = document.getElementById('popup-overlay');
+    
+    if (popup.classList.contains('active')) {
+      popup.classList.remove('active');
+      overlay.style.display = 'none';
+      document.body.style.overflow = '';
+    } else {
+      closeModelPopup();
+      document.getElementById('settings-panel').classList.remove('active');
+      document.getElementById('bg-settings-popup').classList.remove('active');
+      document.getElementById('appearance-settings-panel').classList.remove('active');
+      
+      popup.classList.add('active');
+      overlay.style.display = 'block';
+      document.body.style.overflow = 'hidden';
+    }
+  }
+
+  function closeAllPopups() {
+    const exportPopup = document.getElementById('export-import-popup');
+    const bgPopup = document.getElementById('bg-settings-popup');
+    const overlay = document.getElementById('popup-overlay');
+    const appearancePanel = document.getElementById('appearance-settings-panel');
+    
+    if (exportPopup) exportPopup.classList.remove('active');
+    if (bgPopup) bgPopup.classList.remove('active');
+    if (appearancePanel) appearancePanel.classList.remove('active');
+    if (overlay) overlay.style.display = 'none';
+    document.body.style.overflow = '';
+    
+    closeModelPopup();
+    document.getElementById('settings-panel').classList.remove('active');
+    document.getElementById('model-popup').style.display = 'none';
+    
+    tempBackgroundUrl = null;
+  }
+
+  function exportChatToFile() {
+    if (!messages || messages.length === 0) {
+      alert("当前没有聊天记录可导出");
+      return;
+    }
+    
+    try {
+      const data = {
+        exportTime: new Date().toISOString(),
+        model: currentModel || 'unknown',
+        version: "1.0",
+        messages: messages
+      };
+      
+      const jsonStr = JSON.stringify(data, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      a.href = url;
+      a.download = `chat-export-${timestamp}.json`;
+      a.style.display = 'none';
+      
+      document.body.appendChild(a);
+      a.click();
+      
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toggleExportImport();
+        alert("导出成功！文件已下载");
+      }, 500);
+      
+    } catch (err) {
+      console.error("导出失败:", err);
+      alert("导出失败：" + err.message);
+    }
+  }
+
+  function exportChatToMarkdown() {
+    if (!messages || messages.length === 0) {
+      alert("当前没有聊天记录可导出");
+      return;
+    }
+    
+    try {
+      let md = `# AI 对话记录\n\n`;
+      md += `- 导出时间：${new Date().toLocaleString()}\n`;
+      md += `- 当前模型：${currentModel || '未知'}\n`;
+      md += `- 消息数量：${messages.length}\n\n`;
+      md += `---\n\n`;
+      
+      messages.forEach(m => {
+        if (m.role === 'user') {
+          md += `## 👤 用户\n\n${m.content}\n\n`;
+        } else if (m.role === 'assistant') {
+          md += `## 🤖 AI\n\n${m.content}\n\n`;
+        }
+        md += `---\n\n`;
+      });
+      
+      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      a.href = url;
+      a.download = `chat-export-${timestamp}.md`;
+      a.style.display = 'none';
+      
+      document.body.appendChild(a);
+      a.click();
+      
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toggleExportImport();
+        alert("导出成功！文件已下载");
+      }, 500);
+      
+    } catch (err) {
+      console.error("导出失败:", err);
+      alert("导出失败：" + err.message);
+    }
+  }
+
+  function importChatFromFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    if (!file.name.endsWith('.json')) {
+      alert("请上传 JSON 格式的文件（通过本页面导出的文件）");
+      input.value = '';
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        
+        if (!data.messages || !Array.isArray(data.messages)) {
+          throw new Error("文件格式不正确，缺少 messages 数组");
+        }
+        
+        if (confirm(`确定导入聊天记录？\n\n- 消息数量：${data.messages.length}\n- 导出时间：${data.exportTime ? new Date(data.exportTime).toLocaleString() : '未知'}\n- 原模型：${data.model || '未知'}\n\n导入后将覆盖当前对话！`)) {
+          messages = data.messages;
+          nextId = data.nextId || messages.length + 1;
+          if (data.model) currentModel = data.model;
+          
+          const chat = document.getElementById("chat");
+          chat.innerHTML = '';
+          messages.forEach(m => {
+            if (!m.id) m.id = nextId++;
+            addMessageToUI(m.id, m.content, m.role);
+          });
+          
+          renderModelDisplay();
+          saveChatToStorage();
+          updateRegenerateButton();
+          
+          alert("导入成功！");
+          toggleExportImport();
+        }
+      } catch (err) {
+        alert("导入失败：" + err.message);
+        console.error(err);
+      }
+      input.value = '';
+    };
+    
+    reader.onerror = () => {
+      alert("文件读取失败");
+      input.value = '';
+    };
+    
+    reader.readAsText(file);
+  }
+
+  const sysPromptInput = document.getElementById('system-prompt');
+  if (sysPromptInput) {
+    sysPromptInput.addEventListener('change', saveSettings);
+  }
+</script>
+
+</body>
+</html>
